@@ -42,7 +42,7 @@ onMounted(async () => {
     const query = `*[_type == "dish"] | order(category->sortOrder asc, sortOrder asc) {
       _id,
       name,
-      price,
+      priceInfo,
       description,
       imageFilename,
       category->{
@@ -73,13 +73,21 @@ onMounted(async () => {
           <van-card
             v-for="dish in group.dishes"
             :key="dish._id"
-            :price="dish.price.toFixed(2)"
             :desc="dish.description"
             :title="dish.name"
             :thumb="`${dish.imageFilename}`"
             currency="R$"
             class="dish-card"
-          />
+          >
+            <template #price>
+              <div class="dish-price">
+                <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
+                  R$ {{ dish.priceInfo.amount.toFixed(2) }}
+                </span>
+                <span v-else> 时价 </span>
+              </div>
+            </template>
+          </van-card>
         </div>
       </div>
     </div>
