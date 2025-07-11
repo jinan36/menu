@@ -5,7 +5,7 @@ export default {
   fields: [
     {
       name: 'name',
-      title: 'Dish Name',
+      title: '菜品名称',
       type: 'string',
       validation: (Rule) => Rule.required(),
     },

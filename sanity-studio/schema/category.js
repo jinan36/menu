@@ -19,6 +19,7 @@ export default {
       name: 'sortOrder',
       title: 'Sort Order',
       type: 'number',
+      description: '数字越小，排序越靠前。可用于将招牌菜排在前面。',
     },
   ],
 }
