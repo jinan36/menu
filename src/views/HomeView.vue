@@ -76,13 +76,12 @@ onMounted(async () => {
             :desc="dish.description"
             :title="dish.name"
             :thumb="`${dish.imageFilename}`"
-            currency="R$"
             class="dish-card"
           >
             <template #price>
               <div class="dish-price">
                 <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
-                  R$ {{ dish.priceInfo.amount.toFixed(2) }}
+                  {{ dish.priceInfo.amount.toFixed(2) }}
                 </span>
                 <span v-else> 时价 </span>
               </div>
