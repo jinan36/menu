@@ -26,5 +26,18 @@ export default {
       title: 'Description',
       type: 'text',
     },
+    {
+      name: 'sortOrder',
+      title: 'Sort Order',
+      type: 'number',
+      description: '数字越小，排序越靠前。可用于将招牌菜排在前面。',
+    },
+    {
+      name: 'category',
+      title: 'Category',
+      type: 'reference', // 类型是 reference
+      to: [{type: 'category'}], // 指向 'category' 这个 document 类型
+      validation: (Rule) => Rule.required(),
+    },
   ],
 }
