@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import sanityClient from '../sanityClient' // 引入您的 Sanity 客户端实例
+import sanityClient from '../sanityClient'
 
 // 响应式状态
 const allDishes = ref([])
@@ -57,11 +57,36 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+const openImagePreview = (dish) => {
+  console.log(dish)
+  // 安全检查，如果菜品没有图片，则不执行任何操作
+  if (!dish || !dish.imageFilename) {
+    return
+  }
+
+  // 构建完整的高清图片URL
+  const imageUrl = `${dish.imageFilename}`
+
+  // 调用Vant的图片预览函数
+  showImagePreview({
+    images: [imageUrl], // 需要一个图片URL数组，即使只有一张
+    startPosition: 0, // 从第一张图片开始（因为我们只有一个）
+    closeable: true, // 显示关闭按钮
+  })
+}
 </script>
 
 <template>
   <main>
     <div class="menu-list-container">
+      <div class="wifi-info-section">
+        <van-cell-group inset>
+          <van-cell title="Wi-Fi 名称" value="Apartamento 64" />
+          <van-cell title="Wi-Fi 密码" value="66664444"></van-cell>
+        </van-cell-group>
+      </div>
+
       <van-loading v-if="isLoading" size="24px" vertical>加载中...</van-loading>
 
       <div v-else>
@@ -77,6 +102,7 @@ onMounted(async () => {
             :title="dish.name"
             :thumb="`${dish.imageFilename}`"
             class="dish-card"
+            @click="openImagePreview(dish)"
           >
             <template #price>
               <div class="dish-price">
@@ -96,6 +122,7 @@ onMounted(async () => {
 <style>
 .menu-list-container {
   background-color: #f7f8fa;
+  min-height: 100vh;
 }
 .category-title {
   font-weight: bold;
@@ -103,11 +130,20 @@ onMounted(async () => {
   /* 如果需要，可以添加更多样式 */
 }
 .dish-card {
-  /* Vant Card 默认背景是白色，如果需要可以取消 */
-  --van-card-background-color: #ffffff;
   margin-top: 0; /* 取消卡片间的默认上边距，让列表更紧凑 */
 }
 .dish-card:not(:last-child) {
-  border-bottom: 1px solid #f7f8fa; /* 给卡片之间加一个分隔线 */
+  border-bottom: 1px solid #ffffff; /* 给卡片之间加一个分隔线 */
+}
+
+.wifi-info-section {
+  margin: 16px 0;
+}
+
+.password-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 让内容靠右对齐 */
+  gap: 8px; /* 在密码和按钮之间增加一点间距 */
 }
 </style>
