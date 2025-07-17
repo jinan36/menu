@@ -14,7 +14,6 @@ const groupedMenu = computed(() => {
 
   const groups = []
   let currentGroup = null
-  //test
 
   allDishes.value.forEach((dish) => {
     // 确保菜品有关联的分类
