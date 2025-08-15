@@ -5,6 +5,7 @@ import sanityClient from '../sanityClient'
 // 响应式状态
 const allDishes = ref([])
 const isLoading = ref(true)
+const active = ref(0)
 
 // 使用 computed 属性来处理数据分组，这是核心！
 const groupedMenu = computed(() => {
@@ -90,11 +91,34 @@ const openImagePreview = (dish) => {
       <van-loading v-if="isLoading" size="24px" vertical>加载中...</van-loading>
 
       <div v-else>
-        <div v-for="group in groupedMenu" :key="group.categoryId">
+        <van-tabs v-model:active="active" scrollspy sticky>
+          <van-tab v-for="group in groupedMenu" :title="group.categoryName" :key="group.categoryId">
+            <div class="dish-card" v-for="dish in group.dishes" :key="dish._id">
+              <van-image
+                v-if="dish.imageFilename"
+                lazy-load
+                :src="dish.imageFilename"
+                fit="cover"
+                radius="10px"
+                width="100%"
+                height="60vw"
+                @click="openImagePreview(dish)"
+              />
+              <div class="dish-name">{{ dish.name }}</div>
+              <div class="dish-description">{{ dish.description }}</div>
+              <div class="dish-price">
+                <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
+                  {{ dish.priceInfo.amount.toFixed(2) }}
+                </span>
+                <span v-else> 时价 </span>
+              </div>
+            </div>
+          </van-tab>
+        </van-tabs>
+        <!-- <div v-for="group in groupedMenu" :key="group.categoryId">
           <van-sticky>
             <van-cell :title="group.categoryName" class="category-title" />
           </van-sticky>
-
           <van-card
             v-for="dish in group.dishes"
             :key="dish._id"
@@ -113,7 +137,7 @@ const openImagePreview = (dish) => {
               </div>
             </template>
           </van-card>
-        </div>
+        </div> -->
       </div>
     </div>
   </main>
@@ -126,18 +150,30 @@ const openImagePreview = (dish) => {
 }
 .category-title {
   font-weight: bold;
-  font-size: 16px;
+  font-size: 20px;
   /* 如果需要，可以添加更多样式 */
 }
 .dish-card {
-  margin-top: 0; /* 取消卡片间的默认上边距，让列表更紧凑 */
+  padding: 16px; /* 取消卡片间的默认上边距，让列表更紧凑 */
 }
 .dish-card:not(:last-child) {
   border-bottom: 1px solid #ffffff; /* 给卡片之间加一个分隔线 */
 }
-
+.dish-name {
+  font-size: 20px;
+  color: #333;
+}
+.dish-description {
+  font-size: 16px;
+  color: #999;
+}
+.dish-price {
+  font-size: 18px;
+  color: #333;
+}
 .wifi-info-section {
-  margin: 16px 0;
+  /* margin: 16px 0; */
+  padding: 16px 0;
 }
 
 .password-value {

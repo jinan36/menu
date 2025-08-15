@@ -35,6 +35,9 @@
 
   --section-gap: 160px;
 }
+:root:root {
+  --van-font-size-md: 20px;
+}
 
 @media (prefers-color-scheme: dark) {
   :root {
