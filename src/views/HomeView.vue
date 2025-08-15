@@ -40,7 +40,7 @@ const groupedMenu = computed(() => {
 // 组件挂载后获取数据
 onMounted(async () => {
   try {
-    const query = `*[_type == "dish"] | order(category->sortOrder asc, sortOrder asc) {
+    const query = `*[_type == "dish" && status == 0 ] | order(category->sortOrder asc, sortOrder asc) {
       _id,
       name,
       priceInfo,
@@ -99,7 +99,7 @@ const openImagePreview = (dish) => {
                 lazy-load
                 :src="dish.imageFilename"
                 fit="cover"
-                radius="10px"
+                radius="5px"
                 width="100%"
                 height="60vw"
                 @click="openImagePreview(dish)"
@@ -145,7 +145,6 @@ const openImagePreview = (dish) => {
 
 <style>
 .menu-list-container {
-  background-color: #f7f8fa;
   min-height: 100vh;
 }
 .category-title {
@@ -154,10 +153,9 @@ const openImagePreview = (dish) => {
   /* 如果需要，可以添加更多样式 */
 }
 .dish-card {
-  padding: 16px; /* 取消卡片间的默认上边距，让列表更紧凑 */
-}
-.dish-card:not(:last-child) {
-  border-bottom: 1px solid #ffffff; /* 给卡片之间加一个分隔线 */
+  margin: 0 16px;
+  padding: 16px 0 8px 0; /* 取消卡片间的默认上边距，让列表更紧凑 */
+  border-bottom: 1px solid #eee;
 }
 .dish-name {
   font-size: 20px;
@@ -172,7 +170,7 @@ const openImagePreview = (dish) => {
   color: #333;
 }
 .wifi-info-section {
-  /* margin: 16px 0; */
+  background-color: #f7f8fa;
   padding: 16px 0;
 }
 
