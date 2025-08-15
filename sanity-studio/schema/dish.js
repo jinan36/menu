@@ -57,21 +57,33 @@ export default {
     },
     {
       name: 'description',
-      title: 'Description',
+      title: '描述',
       type: 'text',
     },
     {
       name: 'sortOrder',
-      title: 'Sort Order',
+      title: '排序',
       type: 'number',
       description: '数字越小，排序越靠前。可用于将招牌菜排在前面。',
     },
     {
       name: 'category',
-      title: 'Category',
+      title: '分类',
       type: 'reference', // 类型是 reference
       to: [{type: 'category'}], // 指向 'category' 这个 document 类型
       validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'status',
+      title: '上架状态',
+      type: 'number',
+      options: {
+        list: [
+          {title: '上架', value: 0},
+          {title: '下架', value: 1},
+        ],
+      },
+      initialValue: 0,
     },
   ],
 }
