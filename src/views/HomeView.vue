@@ -87,57 +87,37 @@ const openImagePreview = (dish) => {
           <van-cell title="Wi-Fi 密码" value="66664444"></van-cell>
         </van-cell-group>
       </div>
-
-      <van-loading v-if="isLoading" size="24px" vertical>加载中...</van-loading>
-
+      <div v-if="isLoading" class="lodaing-wrapper">
+        <van-loading size="24px" vertical>加载中...</van-loading>
+      </div>
       <div v-else>
         <van-tabs v-model:active="active" scrollspy sticky>
           <van-tab v-for="group in groupedMenu" :title="group.categoryName" :key="group.categoryId">
-            <div class="dish-card" v-for="dish in group.dishes" :key="dish._id">
-              <van-image
-                v-if="dish.imageFilename"
-                lazy-load
-                :src="dish.imageFilename"
-                fit="cover"
-                radius="5px"
-                width="100%"
-                height="60vw"
-                @click="openImagePreview(dish)"
-              />
-              <div class="dish-name">{{ dish.name }}</div>
-              <div class="dish-description">{{ dish.description }}</div>
-              <div class="dish-price">
-                <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
-                  {{ dish.priceInfo.amount.toFixed(2) }}
-                </span>
-                <span v-else> 时价 </span>
+            <div class="dish-cards-wrapper">
+              <van-divider>{{ group.categoryName }}</van-divider>
+              <div class="dish-card" v-for="dish in group.dishes" :key="dish._id">
+                <van-image
+                  v-if="dish.imageFilename"
+                  lazy-load
+                  :src="dish.imageFilename"
+                  fit="cover"
+                  radius="5px"
+                  width="100%"
+                  height="60vw"
+                  @click="openImagePreview(dish)"
+                />
+                <div class="dish-name">{{ dish.name }}</div>
+                <div class="dish-description">{{ dish.description }}</div>
+                <div class="dish-price">
+                  <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
+                    {{ dish.priceInfo.amount.toFixed(2) }}
+                  </span>
+                  <span v-else> 时价 </span>
+                </div>
               </div>
             </div>
           </van-tab>
         </van-tabs>
-        <!-- <div v-for="group in groupedMenu" :key="group.categoryId">
-          <van-sticky>
-            <van-cell :title="group.categoryName" class="category-title" />
-          </van-sticky>
-          <van-card
-            v-for="dish in group.dishes"
-            :key="dish._id"
-            :desc="dish.description"
-            :title="dish.name"
-            :thumb="`${dish.imageFilename}`"
-            class="dish-card"
-            @click="openImagePreview(dish)"
-          >
-            <template #price>
-              <div class="dish-price">
-                <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
-                  {{ dish.priceInfo.amount.toFixed(2) }}
-                </span>
-                <span v-else> 时价 </span>
-              </div>
-            </template>
-          </van-card>
-        </div> -->
       </div>
     </div>
   </main>
@@ -150,12 +130,16 @@ const openImagePreview = (dish) => {
 .category-title {
   font-weight: bold;
   font-size: 20px;
-  /* 如果需要，可以添加更多样式 */
 }
-.dish-card {
-  margin: 0 16px;
-  padding: 16px 0 8px 0; /* 取消卡片间的默认上边距，让列表更紧凑 */
+.dish-cards-wrapper {
+  padding: 0 16px;
+}
+.dish-card:not(:last-child) {
   border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+.dish-card ~ .dish-card {
+  padding-top: 16px;
 }
 .dish-name {
   font-size: 20px;
@@ -172,6 +156,9 @@ const openImagePreview = (dish) => {
 .wifi-info-section {
   background-color: #f7f8fa;
   padding: 16px 0;
+}
+.lodaing-wrapper {
+  padding: 12px 0;
 }
 
 .password-value {
