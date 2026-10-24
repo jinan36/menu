@@ -70,11 +70,17 @@ export default {
         }),
     },
     {
-      // 这里我们只存R2上的文件名，如 'brazilian-steak.jpg'
+      name: 'photo',
+      title: '菜品照片',
+      type: 'image',
+      options: {hotspot: true, accept: 'image/jpeg,image/png,image/webp'},
+      description: '上传自己拍摄的 JPG、PNG 或 WebP 照片，可调整裁剪和焦点。发布后优先显示此照片；未上传时使用下方的原图片链接。手机 HEIC 照片请先转成 JPG。',
+    },
+    {
       name: 'imageFilename',
-      title: 'Image Filename (from Cloudflare R2)',
+      title: '原图片链接（备用）',
       type: 'string',
-      description: 'Just the filename, not the full URL.',
+      description: '保留现有网络图片的完整地址。未上传菜品照片时使用；上传照片后无需删除此链接。',
     },
     {
       name: 'description',

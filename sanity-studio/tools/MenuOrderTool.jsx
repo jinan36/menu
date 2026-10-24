@@ -78,7 +78,7 @@ const query = `{
   "categories": *[_type == "category" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))]
     | order(sortOrder asc, _id asc){_id, name},
   "dishes": *[_type == "dish" && !(_id in path("versions.**"))]
-    {_id, _rev, name, sortOrder, status, imageFilename, priceInfo, "categoryId": category._ref}
+    {_id, _rev, name, sortOrder, status, imageFilename, "photoUrl": photo.asset->url, priceInfo, "categoryId": category._ref}
 }`
 
 export default function MenuOrderTool() {
@@ -180,6 +180,7 @@ export default function MenuOrderTool() {
       <ol style={{listStyle: 'none', padding: 0, margin: 0}} aria-label="菜品排序">
         {items.map((item, index) => {
           const dish = item.document
+          const thumbnail = dish.photoUrl ? `${dish.photoUrl}?w=104&h=104&fit=crop&auto=format&q=75` : dish.imageFilename
           const draftOnly = item.versions.every((v) => v._id.startsWith('drafts.'))
           const price = dish.priceInfo?.priceType === 'market' ? '时价' :
             Number.isFinite(dish.priceInfo?.amount) && dish.priceInfo.amount >= 0 ? dish.priceInfo.amount.toFixed(2) : '价格待确认'
@@ -189,7 +190,7 @@ export default function MenuOrderTool() {
             onDragEnd={() => { dragId.current = null; setDropId('') }}
             onDrop={(e) => { e.preventDefault(); if (!busy && dragId.current) move(items.findIndex((d) => d.id === dragId.current), index); dragId.current = null; setDropId('') }}>
             <Handle aria-hidden="true">⠿</Handle><NumberLabel>{index + 1}</NumberLabel>
-            <Picture>{dish.imageFilename ? <img src={dish.imageFilename} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = 'none' }} /> : '无图'}</Picture>
+            <Picture>{thumbnail ? <img src={thumbnail} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = 'none' }} /> : '无图'}</Picture>
             <Info><strong>{dish.name || '未命名菜品'}</strong><small>
               <Badge $active={!draftOnly && dish.status === 0}>{draftOnly ? '仅草稿' : dish.status === 0 ? '上架' : '未上架'}</Badge>
               {price}{!draftOnly && item.versions.length > 1 && ' · 有未发布草稿'}

@@ -3,6 +3,9 @@ import { ref, onMounted, computed } from 'vue'
 import { showImagePreview } from 'vant'
 import 'vant/es/image-preview/style'
 import sanityClient from '../sanityClient'
+import { createDishImages } from '../dishImages'
+
+const getDishImages = createDishImages(sanityClient)
 
 // 响应式状态
 const allDishes = ref([])
@@ -73,12 +76,14 @@ onMounted(async () => {
       priceInfo,
       description,
       imageFilename,
+      photo{asset, crop, hotspot},
       category->{
         _id,
         name
       }
     }`
-    allDishes.value = await sanityClient.fetch(query)
+    const dishes = await sanityClient.fetch(query)
+    allDishes.value = dishes.map((dish) => ({ ...dish, images: getDishImages(dish) }))
   } catch (error) {
     console.error('Failed to fetch dishes:', error)
   } finally {
@@ -87,14 +92,13 @@ onMounted(async () => {
 })
 
 const openImagePreview = (dish) => {
-  console.log(dish)
   // 安全检查，如果菜品没有图片，则不执行任何操作
-  if (!dish || !dish.imageFilename) {
+  if (!dish?.images?.preview) {
     return
   }
 
   // 构建完整的高清图片URL
-  const imageUrl = `${dish.imageFilename}`
+  const imageUrl = dish.images.preview
 
   // 调用Vant的图片预览函数
   showImagePreview({
@@ -124,9 +128,9 @@ const openImagePreview = (dish) => {
               <van-divider>{{ group.categoryName }}</van-divider>
               <div class="dish-card" v-for="dish in group.dishes" :key="dish._id">
                 <van-image
-                  v-if="dish.imageFilename"
+                  v-if="dish.images.thumbnail"
                   lazy-load
-                  :src="dish.imageFilename"
+                  :src="dish.images.thumbnail"
                   :alt="dish.name"
                   fit="cover"
                   radius="5px"
