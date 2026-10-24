@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useClient} from 'sanity'
 import styled from 'styled-components'
-import {collectDishes, moveDish, orderPatches} from './menuOrder'
+import {collectOrderDocuments, moveDish, orderPatches} from './menuOrder'
 
 const Page = styled.div`
   height: 100%; overflow: auto; background: var(--card-bg-color, #f6f7f9);
@@ -68,6 +68,12 @@ const Footer = styled.footer`
   small { color: #788491; } div { display: flex; gap: 8px; }
 `
 const Save = styled(Button)`background: #3267d5; color: white; border-color: #3267d5;`
+const ModeSwitch = styled.div`
+  display: flex; gap: 6px; padding: 5px; margin-bottom: 20px;
+  border: 1px solid #8994a333; border-radius: 10px;
+  button { flex: 1; border: 0; }
+  button[aria-pressed='true'] { background: #3267d5; color: white; }
+`
 const Notice = styled.div`
   padding: 14px 16px; margin: 12px 0; border-radius: 8px; font-size: 13px; line-height: 1.7;
   background: ${({$error}) => ($error ? '#e7464615' : '#5279d810')};
@@ -75,8 +81,8 @@ const Notice = styled.div`
 `
 
 const query = `{
-  "categories": *[_type == "category" && !(_id in path("drafts.**")) && !(_id in path("versions.**"))]
-    | order(sortOrder asc, _id asc){_id, name},
+  "categories": *[_type == "category" && !(_id in path("versions.**"))]
+    {_id, _rev, name, sortOrder},
   "dishes": *[_type == "dish" && !(_id in path("versions.**"))]
     {_id, _rev, name, sortOrder, status, imageFilename, "photoUrl": photo.asset->url, priceInfo, "categoryId": category._ref}
 }`
@@ -86,6 +92,7 @@ export default function MenuOrderTool() {
   const client = useMemo(() => studioClient.withConfig({useCdn: false, perspective: 'raw'}), [studioClient])
   const [data, setData] = useState({categories: [], dishes: []})
   const [categoryId, setCategoryId] = useState('')
+  const [mode, setMode] = useState('dishes')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -102,8 +109,10 @@ export default function MenuOrderTool() {
     try {
       const result = await client.fetch(query)
       if (request !== requestId.current) return
-      setData({categories: result.categories, dishes: collectDishes(result.dishes)})
-      setCategoryId((current) => result.categories.some((c) => c._id === current) ? current : result.categories[0]?._id || '')
+      const categories = collectOrderDocuments(result.categories)
+      const published = categories.filter((c) => c.versions.some((v) => !v._id.startsWith('drafts.')))
+      setData({categories, dishes: collectOrderDocuments(result.dishes)})
+      setCategoryId((current) => published.some((c) => c.id === current) ? current : published[0]?.id || '')
     } catch {
       if (request === requestId.current) setError('读取菜单失败，请检查网络和账号权限后重试。')
     } finally {
@@ -116,7 +125,11 @@ export default function MenuOrderTool() {
     return () => { requestId.current += 1 }
   }, [load])
 
-  const original = useMemo(() => data.dishes.filter((d) => d.document.categoryId === categoryId), [data, categoryId])
+  const sortingCategories = mode === 'categories'
+  const publishedCategories = data.categories.filter((c) => c.versions.some((v) => !v._id.startsWith('drafts.')))
+  const original = useMemo(() => mode === 'categories'
+    ? data.categories
+    : data.dishes.filter((d) => d.document.categoryId === categoryId), [data, categoryId, mode])
   useEffect(() => { setItems(original) }, [original])
   const dirty = items.length === original.length && items.some((item, index) => item.id !== original[index]?.id)
   const needsNumbering = items.some((item, index) => item.versions.some((v) => v.sortOrder !== index + 1))
@@ -144,11 +157,11 @@ export default function MenuOrderTool() {
         transaction = transaction.patch(patch.id, (p) => p.ifRevisionId(patch.revision).set({sortOrder: patch.sortOrder}))
       }
       await transaction.commit({visibility: 'sync'})
-      setMessage('排序已保存，已发布菜品的顺序已更新。')
+      setMessage(sortingCategories ? '分类排序已保存，已发布分类的顺序已更新。' : '排序已保存，已发布菜品的顺序已更新。')
       await load()
     } catch (err) {
       setError(err.statusCode === 409
-        ? '保存未完成：有菜品已被其他操作修改。请取消本次调整并刷新列表后重试。'
+        ? '保存未完成：有内容已被其他操作修改。请取消本次调整并刷新列表后重试。'
         : '保存未确认，请检查网络或编辑权限。可刷新列表核对服务器上的顺序。')
     } finally {
       setSaving(false)
@@ -159,25 +172,31 @@ export default function MenuOrderTool() {
     <Header>
       <Eyebrow>MENU / ORDER</Eyebrow>
       <h1>菜单排序</h1>
-      <p>把招牌菜放在前面。选择分类，拖动菜品或点击箭头调整顺序。</p>
+      <p>{sortingCategories ? '调整菜单分类的先后顺序，拖动分类或点击箭头即可。' : '把招牌菜放在前面。选择分类，拖动菜品或点击箭头调整顺序。'}</p>
     </Header>
-    <Panel>
+    <ModeSwitch role="group" aria-label="排序范围">
+      <Button aria-pressed={!sortingCategories} disabled={busy || dirty} onClick={() => { setMode('dishes'); setMessage(''); setError(''); dragId.current = null; setDropId('') }}>菜品排序</Button>
+      <Button aria-pressed={sortingCategories} disabled={busy || dirty} onClick={() => { setMode('categories'); setMessage(''); setError(''); dragId.current = null; setDropId('') }}>分类排序</Button>
+    </ModeSwitch>
+    {!sortingCategories && <Panel>
       <label htmlFor="menu-category">选择菜品分类</label>
       <select id="menu-category" value={categoryId} disabled={busy || dirty} onChange={(e) => { setCategoryId(e.target.value); setMessage('') }}>
-        {!data.categories.length && <option value="">暂无分类</option>}
-        {data.categories.map((c) => <option key={c._id} value={c._id}>{c.name || '未命名分类'}</option>)}
+        {!publishedCategories.length && <option value="">暂无已发布分类</option>}
+        {publishedCategories.map((c) => <option key={c.id} value={c.id}>{c.document.name || '未命名分类'}</option>)}
       </select>
-    </Panel>
-    <Notice>保存后，当前分类自动编号为 1、2、3……，并更新线上菜单顺序。仅修改排序字段，不会发布菜品的其他草稿内容。</Notice>
+    </Panel>}
+    <Notice>{sortingCategories
+      ? '保存后，分类自动编号为 1、2、3……，更新前台分类顺序。只修改分类排序，不改变分类内菜品顺序，也不会发布其他草稿内容。仅草稿的分类及没有上架菜品的分类不会出现在前台。'
+      : '保存后，当前分类自动编号为 1、2、3……，并更新线上菜单顺序。仅修改排序字段，不会发布菜品的其他草稿内容。'}</Notice>
     {error && <Notice $error role="alert">{error}</Notice>}
     {message && <Notice role="status">{message}</Notice>}
     <ListHeader>
-      <h2>{data.categories.find((c) => c._id === categoryId)?.name || '菜品列表'} <span>· {items.length} 道菜品</span></h2>
+      <h2>{sortingCategories ? '全部分类' : data.categories.find((c) => c.id === categoryId)?.document.name || '菜品列表'} <span>· {items.length} {sortingCategories ? '个分类' : '道菜品'}</span></h2>
       <Button disabled={busy || dirty} onClick={load}>刷新列表</Button>
     </ListHeader>
     {loading ? <Notice role="status">正在加载菜单…</Notice> : <>
-      {!items.length && <Notice>当前分类暂无菜品。请在 Dish 中添加菜品并关联已发布的分类。</Notice>}
-      <ol style={{listStyle: 'none', padding: 0, margin: 0}} aria-label="菜品排序">
+      {!items.length && <Notice>{sortingCategories ? '暂无分类，请先在 Category 中添加分类。' : '当前分类暂无菜品。请在 Dish 中添加菜品并关联已发布的分类。'}</Notice>}
+      <ol style={{listStyle: 'none', padding: 0, margin: 0}} aria-label={sortingCategories ? '分类排序' : '菜品排序'}>
         {items.map((item, index) => {
           const dish = item.document
           const thumbnail = dish.photoUrl ? `${dish.photoUrl}?w=104&h=104&fit=crop&auto=format&q=75` : dish.imageFilename
@@ -190,10 +209,16 @@ export default function MenuOrderTool() {
             onDragEnd={() => { dragId.current = null; setDropId('') }}
             onDrop={(e) => { e.preventDefault(); if (!busy && dragId.current) move(items.findIndex((d) => d.id === dragId.current), index); dragId.current = null; setDropId('') }}>
             <Handle aria-hidden="true">⠿</Handle><NumberLabel>{index + 1}</NumberLabel>
-            <Picture>{thumbnail ? <img src={thumbnail} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = 'none' }} /> : '无图'}</Picture>
-            <Info><strong>{dish.name || '未命名菜品'}</strong><small>
+            {!sortingCategories && <Picture>{thumbnail ? <img src={thumbnail} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = 'none' }} /> : '无图'}</Picture>}
+            <Info><strong>{dish.name || (sortingCategories ? '未命名分类' : '未命名菜品')}</strong><small>
+              {sortingCategories ? <>
+                <Badge $active={!draftOnly}>{draftOnly ? '仅草稿' : '已发布'}</Badge>
+                {data.dishes.filter((d) => d.document.categoryId === item.id).length} 道菜品
+                {!draftOnly && item.versions.length > 1 && ' · 有未发布草稿'}
+              </> : <>
               <Badge $active={!draftOnly && dish.status === 0}>{draftOnly ? '仅草稿' : dish.status === 0 ? '上架' : '未上架'}</Badge>
               {price}{!draftOnly && item.versions.length > 1 && ' · 有未发布草稿'}
+              </>}
             </small></Info>
             <Arrows>
               <Button aria-label={`上移${dish.name || '菜品'}`} title="上移" disabled={busy || index === 0} onClick={() => move(index, index - 1)}>↑</Button>
@@ -204,7 +229,7 @@ export default function MenuOrderTool() {
       </ol>
     </>}
     <Footer>
-      <small aria-live="polite">{dirty ? '有未保存的调整 · 保存或取消后可切换分类' : needsNumbering ? '保存可整理为连续整数序号' : '当前顺序已保存'}</small>
+      <small aria-live="polite">{dirty ? '有未保存的调整 · 保存或取消后可切换排序范围和分类' : needsNumbering ? '保存可整理为连续整数序号' : '当前顺序已保存'}</small>
       <div><Button disabled={busy || !dirty} onClick={() => { setItems(original); setMessage(''); setError('') }}>取消调整</Button>
         <Save disabled={busy || !items.length || (!dirty && !needsNumbering)} onClick={save}>{saving ? '正在保存…' : '保存排序'}</Save></div>
     </Footer>

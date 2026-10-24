@@ -1,4 +1,4 @@
-export function collectDishes(documents) {
+export function collectOrderDocuments(documents) {
   const dishes = new Map()
   for (const document of documents) {
     const id = document._id.replace(/^drafts\./, '')
@@ -18,6 +18,9 @@ export function collectDishes(documents) {
     return a.id.localeCompare(b.id)
   })
 }
+
+// 保留原入口，菜品与分类共用相同的草稿合并和排序规则。
+export const collectDishes = collectOrderDocuments
 
 export function moveDish(items, from, to) {
   if (from < 0 || to < 0 || from >= items.length || to >= items.length) return items
