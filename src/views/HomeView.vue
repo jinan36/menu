@@ -1,5 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { showImagePreview } from 'vant'
+import 'vant/es/image-preview/style'
 import sanityClient from '../sanityClient'
 
 // 响应式状态
@@ -103,12 +105,26 @@ const openImagePreview = (dish) => {
                   v-if="dish.imageFilename"
                   lazy-load
                   :src="dish.imageFilename"
+                  :alt="dish.name"
                   fit="cover"
                   radius="5px"
                   width="100%"
                   height="60vw"
                   @click="openImagePreview(dish)"
-                />
+                >
+                  <template #loading>
+                    <div class="dish-image-placeholder" role="status">
+                      <van-loading size="24px" />
+                      <span>图片加载中…</span>
+                    </div>
+                  </template>
+                  <template #error>
+                    <div class="dish-image-placeholder" role="status">
+                      <van-icon name="photo-fail" size="32" aria-hidden="true" />
+                      <span>图片暂时无法加载</span>
+                    </div>
+                  </template>
+                </van-image>
                 <div class="dish-name">{{ dish.name }}</div>
                 <div class="dish-description">{{ dish.description }}</div>
                 <div class="dish-price">
@@ -144,6 +160,18 @@ const openImagePreview = (dish) => {
 .dish-name {
   font-size: 20px;
   color: #333;
+}
+.dish-image-placeholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #f7f8fa;
+  color: #969799;
+  font-size: 14px;
 }
 .dish-description {
   font-size: 16px;
