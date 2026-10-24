@@ -2,6 +2,27 @@ export default {
   name: 'dish',
   title: 'Dish',
   type: 'document',
+  preview: {
+    select: {
+      title: 'name',
+      status: 'status',
+      category: 'category.name',
+      priceType: 'priceInfo.priceType',
+      amount: 'priceInfo.amount',
+    },
+    prepare({title, status, category, priceType, amount}) {
+      const statusLabel = status === 0 ? '上架' : status === 1 ? '下架' : '状态未设置'
+      const price = priceType === 'market'
+        ? '时价'
+        : priceType === 'fixed' && Number.isFinite(amount) && amount >= 0
+          ? amount.toFixed(2)
+          : '价格待确认'
+      return {
+        title: title || '未命名菜品',
+        subtitle: `${statusLabel} · ${category || '未分类'} · ${price}`,
+      }
+    },
+  },
   fields: [
     {
       name: 'name',
