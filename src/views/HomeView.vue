@@ -125,7 +125,9 @@ const openImagePreview = (dish) => {
         <van-tabs v-model:active="active" scrollspy sticky>
           <van-tab v-for="group in groupedMenu" :title="group.categoryName" :key="group.categoryId">
             <div class="dish-cards-wrapper">
-              <van-divider>{{ group.categoryName }}</van-divider>
+              <div class="category-heading">
+                <h2>{{ group.categoryName }}</h2>
+              </div>
               <div class="dish-card" v-for="dish in group.dishes" :key="dish._id">
                 <van-image
                   v-if="dish.images.thumbnail"
@@ -134,7 +136,7 @@ const openImagePreview = (dish) => {
                   :alt="dish.name"
                   fit="cover"
                   class="dish-image"
-                  radius="5px"
+                  radius="8px"
                   width="100%"
                   @click="openImagePreview(dish)"
                 >
@@ -151,10 +153,12 @@ const openImagePreview = (dish) => {
                     </div>
                   </template>
                 </van-image>
-                <div class="dish-name">{{ dish.name }}</div>
-                <div class="dish-description">{{ dish.description }}</div>
-                <div class="dish-price">
-                  {{ formatPrice(dish.priceInfo) }}
+                <div class="dish-details">
+                  <div class="dish-title-row">
+                    <h3 class="dish-name">{{ dish.name }}</h3>
+                    <div class="dish-price">{{ formatPrice(dish.priceInfo) }}</div>
+                  </div>
+                  <p v-if="dish.description" class="dish-description">{{ dish.description }}</p>
                 </div>
               </div>
             </div>
@@ -165,34 +169,118 @@ const openImagePreview = (dish) => {
   </main>
 </template>
 
-<style>
+<style scoped>
 .menu-list-container {
+  --menu-accent: #8d342c;
+  --menu-ink: #29231f;
+  --menu-muted: #756b61;
+  --menu-line: #e2d9ce;
+  --van-tabs-nav-background: #f8f5ef;
+  --van-tabs-bottom-bar-color: var(--menu-accent);
+  --van-tab-active-text-color: var(--menu-accent);
+  --van-tab-text-color: var(--menu-muted);
+  --van-tabs-line-height: 56px;
+  --van-tab-font-size: 19px;
+  max-width: 760px;
+  margin: 0 auto;
   min-height: 100vh;
+  background: #f8f5ef;
+  color: var(--menu-ink);
 }
-.category-title {
-  font-weight: bold;
-  font-size: 20px;
+.wifi-info-section {
+  --van-cell-group-inset-padding: 0;
+  --van-cell-group-inset-radius: 10px;
+  --van-cell-group-background: #f1ebe2;
+  --van-cell-background: transparent;
+  --van-cell-text-color: var(--menu-muted);
+  --van-cell-value-color: #756b61;
+  --van-cell-border-color: var(--menu-line);
+  --van-cell-font-size: 17px;
+  --van-cell-value-font-size: 20px;
+  --van-cell-line-height: 28px;
+  --van-cell-vertical-padding: 12px;
+  padding: 16px 12px 8px;
+}
+.wifi-info-section :deep(.van-cell-group) {
+  border: 1px solid var(--menu-line);
+}
+.wifi-info-section :deep(.van-cell) {
+  align-items: baseline;
+  gap: 12px;
+}
+.wifi-info-section :deep(.van-cell__title) {
+  flex: 0 0 90px;
+}
+.wifi-info-section :deep(.van-cell__value) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.menu-list-container :deep(.van-tabs__wrap) {
+  border-bottom: 1px solid var(--menu-line);
+}
+.menu-list-container :deep(.van-tab--active .van-tab__text) {
+  font-weight: 700;
+}
+.menu-list-container :deep(.van-tabs__line) {
+  border-radius: 0;
 }
 .dish-cards-wrapper {
   padding: 0 12px;
+}
+.category-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 26px 4px 16px;
+}
+.category-heading::before,
+.category-heading::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--menu-line);
+}
+.category-heading h2 {
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--menu-muted);
+  letter-spacing: 1px;
+  line-height: 1.4;
 }
 .dish-image {
   display: block;
   aspect-ratio: 4 / 3;
 }
 .dish-card:not(:last-child) {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+  border-bottom: 1px solid var(--menu-line);
+  padding-bottom: 22px;
 }
 .dish-card ~ .dish-card {
-  padding-top: 16px;
+  padding-top: 22px;
+}
+.dish-details {
+  padding: 12px 4px 4px;
+}
+.dish-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
 }
 .dish-name {
-  margin-top: 10px;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.4;
-  color: #333;
+  flex: 1 1 180px;
+  min-width: 0;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  color: #494039;
 }
 .dish-image-placeholder {
   display: flex;
@@ -202,32 +290,35 @@ const openImagePreview = (dish) => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background-color: #f7f8fa;
-  color: #969799;
+  background-color: #eee8df;
+  color: var(--menu-muted);
   font-size: 14px;
 }
 .dish-description {
+  margin-top: 6px;
   font-size: 16px;
-  color: #999;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  color: var(--menu-muted);
 }
 .dish-price {
+  flex: 0 0 auto;
+  margin-left: auto;
   font-size: 22px;
   font-weight: 600;
   line-height: 1.5;
-  color: #333;
-}
-.wifi-info-section {
-  background-color: #f7f8fa;
-  padding: 16px 0;
+  color: var(--menu-accent);
+  font-variant-numeric: tabular-nums;
 }
 .lodaing-wrapper {
-  padding: 12px 0;
+  padding: 32px 0;
 }
-
-.password-value {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end; /* 让内容靠右对齐 */
-  gap: 8px; /* 在密码和按钮之间增加一点间距 */
+@media (min-width: 600px) {
+  .wifi-info-section {
+    padding: 20px 24px 8px;
+  }
+  .dish-cards-wrapper {
+    padding: 0 24px;
+  }
 }
 </style>

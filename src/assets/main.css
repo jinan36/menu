@@ -1,5 +1,15 @@
 @import './base.css';
 
+:root {
+  color-scheme: light;
+  --color-background: #f8f5ef;
+  --color-text: #29231f;
+}
+
+body {
+  background: var(--color-background);
+}
+
 #app {
   max-width: 1280px;
   margin: 0 auto;
