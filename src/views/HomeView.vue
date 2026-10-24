@@ -18,40 +18,32 @@ const formatPrice = (priceInfo) => {
   return '价格待确认'
 }
 
-// 使用 computed 属性来处理数据分组，这是核心！
+// 按分类 ID 归组，不依赖同一分类的菜品连续出现。
 const groupedMenu = computed(() => {
-  if (allDishes.value.length === 0) {
-    return []
-  }
-
-  const groups = []
-  let currentGroup = null
+  const groups = new Map()
 
   allDishes.value.forEach((dish) => {
     // 确保菜品有关联的分类
-    if (!dish.category) return
+    if (!dish.category?._id) return
 
-    // 如果是新的分类，或者第一个分类
-    if (!currentGroup || currentGroup.categoryId !== dish.category._id) {
-      currentGroup = {
+    if (!groups.has(dish.category._id)) {
+      groups.set(dish.category._id, {
         categoryId: dish.category._id,
         categoryName: dish.category.name,
         dishes: [],
-      }
-      groups.push(currentGroup)
+      })
     }
 
-    // 将当前菜品添加到当前分组中
-    currentGroup.dishes.push(dish)
+    groups.get(dish.category._id).dishes.push(dish)
   })
 
-  return groups
+  return Array.from(groups.values())
 })
 
 // 组件挂载后获取数据
 onMounted(async () => {
   try {
-    const query = `*[_type == "dish" && status == 0 ] | order(category->sortOrder asc, sortOrder asc) {
+    const query = `*[_type == "dish" && status == 0 ] | order(category->sortOrder asc, category->_id asc, sortOrder asc, _id asc) {
       _id,
       name,
       priceInfo,
