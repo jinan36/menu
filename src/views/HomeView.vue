@@ -304,10 +304,10 @@ const openImagePreview = (dish) => {
 .dish-price {
   flex: 0 0 auto;
   margin-left: auto;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1.5;
-  color: var(--menu-accent);
+  color: #756b61;
   font-variant-numeric: tabular-nums;
 }
 .lodaing-wrapper {
