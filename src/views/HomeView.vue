@@ -8,6 +8,7 @@ import sanityClient from '../sanityClient'
 const allDishes = ref([])
 const isLoading = ref(true)
 const active = ref(0)
+const wifi = ref({name: 'Apartamento 64', password: '66664444'})
 
 const formatPrice = (priceInfo) => {
   if (priceInfo?.priceType === 'market') return '时价'
@@ -43,6 +44,27 @@ const groupedMenu = computed(() => {
 })
 
 // 组件挂载后获取数据
+onMounted(async () => {
+  try {
+    const settings = await sanityClient.fetch(
+      '*[_type == "restaurantSettings" && _id == "restaurantSettings"][0]{wifiName, wifiPassword}',
+      {},
+      {perspective: 'published'},
+    )
+    // 尚未发布或配置不完整时，沿用现有 Wi-Fi 信息。
+    if (typeof settings?.wifiName === 'string' && settings.wifiName.trim()) {
+      wifi.value = {
+        name: settings.wifiName,
+        password: typeof settings.wifiPassword === 'string' && settings.wifiPassword !== ''
+          ? settings.wifiPassword
+          : '无需密码',
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch restaurant settings:', error)
+  }
+})
+
 onMounted(async () => {
   try {
     const query = `*[_type == "dish" && status == 0 ] | order(category->sortOrder asc, category->_id asc, sortOrder asc, _id asc) {
@@ -88,8 +110,8 @@ const openImagePreview = (dish) => {
     <div class="menu-list-container">
       <div class="wifi-info-section">
         <van-cell-group inset>
-          <van-cell title="Wi-Fi 名称" value="Apartamento 64" />
-          <van-cell title="Wi-Fi 密码" value="66664444"></van-cell>
+          <van-cell title="Wi-Fi 名称" :value="wifi.name" />
+          <van-cell title="Wi-Fi 密码" :value="wifi.password" />
         </van-cell-group>
       </div>
       <div v-if="isLoading" class="lodaing-wrapper">
