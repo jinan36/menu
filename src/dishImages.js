@@ -8,7 +8,7 @@ export function createDishImages(config) {
     if (dish?.photo?.asset?._ref) {
       try {
         return {
-          thumbnail: builder.image(dish.photo).width(900).height(600).fit('crop').auto('format').quality(75).url(),
+          thumbnail: builder.image(dish.photo).width(900).height(675).fit('crop').auto('format').quality(75).url(),
           preview: builder.image(dish.photo).width(2000).fit('max').auto('format').quality(85).url(),
         }
       } catch {

@@ -133,9 +133,9 @@ const openImagePreview = (dish) => {
                   :src="dish.images.thumbnail"
                   :alt="dish.name"
                   fit="cover"
+                  class="dish-image"
                   radius="5px"
                   width="100%"
-                  height="60vw"
                   @click="openImagePreview(dish)"
                 >
                   <template #loading>
@@ -174,7 +174,11 @@ const openImagePreview = (dish) => {
   font-size: 20px;
 }
 .dish-cards-wrapper {
-  padding: 0 16px;
+  padding: 0 12px;
+}
+.dish-image {
+  display: block;
+  aspect-ratio: 4 / 3;
 }
 .dish-card:not(:last-child) {
   border-bottom: 1px solid #eee;
@@ -184,7 +188,10 @@ const openImagePreview = (dish) => {
   padding-top: 16px;
 }
 .dish-name {
-  font-size: 20px;
+  margin-top: 10px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
   color: #333;
 }
 .dish-image-placeholder {
@@ -204,7 +211,9 @@ const openImagePreview = (dish) => {
   color: #999;
 }
 .dish-price {
-  font-size: 18px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.5;
   color: #333;
 }
 .wifi-info-section {

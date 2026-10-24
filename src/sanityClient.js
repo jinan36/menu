@@ -5,4 +5,11 @@ export default createClient({
   dataset: import.meta.env.VITE_SANITY_DATASET,
   useCdn: true, // `false` for fresh data
   apiVersion: '2025-08-14', // use a UTC date in YYYY-MM-DD format
+  ...(import.meta.env.DEV
+    ? {
+        apiHost: `${window.location.origin}/sanity-api`,
+        useProjectHostname: false,
+        useCdn: false,
+      }
+    : {}),
 })
