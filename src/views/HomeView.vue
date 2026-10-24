@@ -7,6 +7,17 @@ const allDishes = ref([])
 const isLoading = ref(true)
 const active = ref(0)
 
+const formatPrice = (priceInfo) => {
+  if (priceInfo?.priceType === 'market') return '时价'
+
+  const amount = priceInfo?.amount
+  if (priceInfo?.priceType === 'fixed' && Number.isFinite(amount) && amount >= 0) {
+    return amount.toFixed(2)
+  }
+
+  return '价格待确认'
+}
+
 // 使用 computed 属性来处理数据分组，这是核心！
 const groupedMenu = computed(() => {
   if (allDishes.value.length === 0) {
@@ -109,10 +120,7 @@ const openImagePreview = (dish) => {
                 <div class="dish-name">{{ dish.name }}</div>
                 <div class="dish-description">{{ dish.description }}</div>
                 <div class="dish-price">
-                  <span v-if="dish.priceInfo && dish.priceInfo.priceType === 'fixed'">
-                    {{ dish.priceInfo.amount.toFixed(2) }}
-                  </span>
-                  <span v-else> 时价 </span>
+                  {{ formatPrice(dish.priceInfo) }}
                 </div>
               </div>
             </div>
