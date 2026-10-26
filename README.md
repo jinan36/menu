@@ -1,5 +1,12 @@
 # .
 
+## Deployment
+
+The menu frontend is deployed by the Vercel `menu` project from the repository root.
+The Sanity Studio is deployed separately from `sanity-studio/`.
+Changes confined to `sanity-studio/` should skip the frontend build through the
+Vercel project's Ignored Build Step.
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
