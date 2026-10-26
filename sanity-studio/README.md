@@ -1,5 +1,12 @@
 # Sanity Clean Content Studio
 
+## Deployment
+
+This Studio is deployed by the Vercel `menu-sanity` project with
+`sanity-studio` as its Root Directory, `npm run build` as its Build Command,
+and `dist` as its Output Directory. The Ignored Build Step checks this directory
+so frontend-only changes can skip the Studio build.
+
 Congratulations, you have now installed the Sanity Content Studio, an open-source real-time content editing environment connected to the Sanity backend.
 
 Now you can do the following things:
