@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useClient} from 'sanity'
 import styled from 'styled-components'
-import {collectOrderDocuments, insertDraggedItem, moveDish, orderPatches} from './menuOrder'
+import {collectOrderDocuments, insertDraggedItem, moveDish, orderPatches, orderVersions} from './menuOrder'
 
 const Page = styled.div`
   height: 100%; overflow: auto; background: var(--card-bg-color, #f6f7f9);
@@ -89,9 +89,9 @@ const Notice = styled.div`
 
 const query = `{
   "categories": *[_type == "category" && !(_id in path("versions.**"))]
-    {_id, _rev, name, sortOrder},
+    {_id, _rev, _createdAt, name, sortOrder},
   "dishes": *[_type == "dish" && !(_id in path("versions.**"))]
-    {_id, _rev, name, sortOrder, status, imageFilename, "photoUrl": photo.asset->url, priceInfo, "categoryId": category._ref}
+    {_id, _rev, _createdAt, sortAddedAt, name, sortOrder, status, imageFilename, "photoUrl": photo.asset->url, priceInfo, "categoryId": category._ref}
 }`
 
 export default function MenuOrderTool() {
@@ -139,7 +139,7 @@ export default function MenuOrderTool() {
     : data.dishes.filter((d) => d.document.categoryId === categoryId), [data, categoryId, mode])
   useEffect(() => { setItems(original) }, [original])
   const dirty = items.length === original.length && items.some((item, index) => item.id !== original[index]?.id)
-  const needsNumbering = items.some((item, index) => item.versions.some((v) => v.sortOrder !== index + 1))
+  const needsNumbering = items.some((item, index) => orderVersions(item).some((v) => v.sortOrder !== index + 1))
   const busy = loading || saving
 
   useEffect(() => {
@@ -216,8 +216,7 @@ export default function MenuOrderTool() {
       <h1>菜单排序</h1>
       <p>{sortingCategories ? '调整菜单分类的先后顺序，拖动分类或点击箭头即可。' : '把招牌菜放在前面。选择分类，拖动菜品或点击箭头调整顺序。'}</p>
     </Header>
-保存排序即可。</Notice>
-“保存排序”即可。</Notice>
+    <Notice>新增菜品和分类默认排在末尾，未整理时按创建时间排列；更换分类的菜品按加入新分类的时间排到末尾。无需填写排序数字，调整后点击“保存排序”即可。</Notice>
     <ModeSwitch role="group" aria-label="排序范围">
       <Button aria-pressed={!sortingCategories} disabled={busy || dirty} onClick={() => { setMode('dishes'); setMessage(''); setError(''); clearDrag() }}>菜品排序</Button>
       <Button aria-pressed={sortingCategories} disabled={busy || dirty} onClick={() => { setMode('categories'); setMessage(''); setError(''); clearDrag() }}>分类排序</Button>

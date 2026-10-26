@@ -15,11 +15,11 @@ export default {
       type: 'text',
     },
     {
-      // 可以用这个字段来控制分类在菜单上的显示顺序
       name: 'sortOrder',
       title: 'Sort Order',
       type: 'number',
-      description: '数字越小，排序越靠前。可用于将招牌菜排在前面。',
+      hidden: true,
+      description: '由菜单排序工具统一管理。新增分类默认排在末尾。',
     },
   ],
 }

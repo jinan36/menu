@@ -1,7 +1,10 @@
+import DishDocumentInput from '../tools/DishDocumentInput'
+
 export default {
   name: 'dish',
   title: 'Dish',
   type: 'document',
+  components: {input: DishDocumentInput},
   preview: {
     select: {
       title: 'name',
@@ -91,11 +94,20 @@ export default {
       name: 'sortOrder',
       title: '排序',
       type: 'number',
-      description: '数字越小，排序越靠前。可用于将招牌菜排在前面。',
+      hidden: true,
+      description: '由菜单排序工具统一管理。',
+    },
+    {
+      name: 'sortAddedAt',
+      title: '加入分类时间',
+      type: 'datetime',
+      hidden: true,
+      description: '更换分类后自动记录，用于将尚未排序的菜品放在新分类末尾。',
     },
     {
       name: 'category',
       title: '分类',
+      description: '新增或更换分类后，菜品默认排在该分类末尾。可在“菜单排序”中调整。',
       type: 'reference', // 类型是 reference
       to: [{type: 'category'}], // 指向 'category' 这个 document 类型
       validation: (Rule) => Rule.required(),

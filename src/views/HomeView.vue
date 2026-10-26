@@ -70,7 +70,7 @@ onMounted(async () => {
 
 onMounted(async () => {
   try {
-    const query = `*[_type == "dish" && status == 0 ] | order(category->sortOrder asc, category->_id asc, sortOrder asc, _id asc) {
+    const query = `*[_type == "dish" && status == 0 ] | order(defined(category->sortOrder) desc, category->sortOrder asc, category->_createdAt asc, category->_id asc, defined(sortOrder) desc, sortOrder asc, coalesce(sortAddedAt, _createdAt) asc, _id asc) {
       _id,
       name,
       priceInfo,

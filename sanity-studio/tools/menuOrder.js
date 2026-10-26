@@ -15,7 +15,11 @@ export function collectOrderDocuments(documents) {
     const rightValid = Number.isFinite(right)
     if (leftValid !== rightValid) return leftValid ? -1 : 1
     if (leftValid && left !== right) return left - right
-    return a.id.localeCompare(b.id)
+    // 无序号的新增项目排在末尾，按创建时间排列；同序号也使用相同次序。
+    const leftCreated = a.document.sortAddedAt || a.document._createdAt || ''
+    const rightCreated = b.document.sortAddedAt || b.document._createdAt || ''
+    if (leftCreated !== rightCreated) return leftCreated < rightCreated ? -1 : 1
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
   })
 }
 
@@ -38,9 +42,14 @@ export function insertDraggedItem(items, sourceId, insertionIndex) {
   return moveDish(items, from, to)
 }
 
+export function orderVersions(item) {
+  // 分类已在草稿中更换时，不能把旧分类的序号写回新分类草稿。
+  return item.versions.filter((document) => document.categoryId === item.document.categoryId)
+}
+
 export function orderPatches(items) {
   return items.flatMap((item, index) =>
-    item.versions.map((document) => ({
+    orderVersions(item).map((document) => ({
       id: document._id,
       revision: document._rev,
       sortOrder: index + 1,
