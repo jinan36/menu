@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useClient} from 'sanity'
 import styled from 'styled-components'
-import {collectOrderDocuments, moveDish, orderPatches} from './menuOrder'
+import {collectOrderDocuments, insertDraggedItem, moveDish, orderPatches} from './menuOrder'
 
 const Page = styled.div`
   height: 100%; overflow: auto; background: var(--card-bg-color, #f6f7f9);
@@ -32,9 +32,16 @@ const ListHeader = styled.div`
   span { font-size: 12px; color: #788491; }
 `
 const Row = styled.li`
+  position: relative;
   display: flex; align-items: center; gap: 12px; padding: 14px 12px; margin-bottom: 8px;
   border: 1px solid #8994a333; border-radius: 10px; background: var(--card-bg-color, white);
-  &[data-drop='true'] { border-color: #5279d8; box-shadow: 0 0 0 2px #5279d833; }
+  &[data-insert]::before {
+    content: ''; position: absolute; left: 0; right: 0; height: 3px;
+    background: #5279d8; border-radius: 3px; pointer-events: none;
+    box-shadow: 0 0 0 1px #5279d822;
+  }
+  &[data-insert='before']::before { top: -6px; }
+  &[data-insert='after']::before { bottom: -6px; }
   @media (max-width: 600px) { gap: 8px; padding: 12px 8px; }
 `
 const Handle = styled.span`color: #8994a3; font-size: 22px; cursor: grab; user-select: none;`
@@ -98,7 +105,7 @@ export default function MenuOrderTool() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [dropId, setDropId] = useState('')
+  const [dropIndex, setDropIndex] = useState(null)
   const dragId = useRef(null)
   const requestId = useRef(0)
 
@@ -147,6 +154,41 @@ export default function MenuOrderTool() {
     setMessage('')
   }
 
+  function clearDrag() {
+    dragId.current = null
+    setDropIndex(null)
+  }
+
+  function insertionAt(event) {
+    // 列表统一处理卡片和卡片之间的空隙，不受子元素或拖动方向影响。
+    const rows = event.currentTarget.querySelectorAll('[data-order-id]')
+    for (let index = 0; index < rows.length; index += 1) {
+      const rect = rows[index].getBoundingClientRect()
+      if (event.clientY < rect.top + rect.height / 2) return index
+    }
+    return rows.length
+  }
+
+  function dragOver(event) {
+    if (busy || !dragId.current) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    const insertionIndex = insertionAt(event)
+    const from = items.findIndex((item) => item.id === dragId.current)
+    // 原位置不显示插入线，避免误以为将发生移动。
+    setDropIndex(from < 0 || insertionIndex === from || insertionIndex === from + 1 ? null : insertionIndex)
+  }
+
+  function drop(event) {
+    if (busy || !dragId.current) return
+    event.preventDefault()
+    const sourceId = dragId.current
+    const insertionIndex = insertionAt(event)
+    setItems((current) => insertDraggedItem(current, sourceId, insertionIndex))
+    setMessage('')
+    clearDrag()
+  }
+
   async function save() {
     setSaving(true)
     setError('')
@@ -174,9 +216,11 @@ export default function MenuOrderTool() {
       <h1>菜单排序</h1>
       <p>{sortingCategories ? '调整菜单分类的先后顺序，拖动分类或点击箭头即可。' : '把招牌菜放在前面。选择分类，拖动菜品或点击箭头调整顺序。'}</p>
     </Header>
+保存排序即可。</Notice>
+“保存排序”即可。</Notice>
     <ModeSwitch role="group" aria-label="排序范围">
-      <Button aria-pressed={!sortingCategories} disabled={busy || dirty} onClick={() => { setMode('dishes'); setMessage(''); setError(''); dragId.current = null; setDropId('') }}>菜品排序</Button>
-      <Button aria-pressed={sortingCategories} disabled={busy || dirty} onClick={() => { setMode('categories'); setMessage(''); setError(''); dragId.current = null; setDropId('') }}>分类排序</Button>
+      <Button aria-pressed={!sortingCategories} disabled={busy || dirty} onClick={() => { setMode('dishes'); setMessage(''); setError(''); clearDrag() }}>菜品排序</Button>
+      <Button aria-pressed={sortingCategories} disabled={busy || dirty} onClick={() => { setMode('categories'); setMessage(''); setError(''); clearDrag() }}>分类排序</Button>
     </ModeSwitch>
     {!sortingCategories && <Panel>
       <label htmlFor="menu-category">选择菜品分类</label>
@@ -194,20 +238,27 @@ export default function MenuOrderTool() {
       <h2>{sortingCategories ? '全部分类' : data.categories.find((c) => c.id === categoryId)?.document.name || '菜品列表'} <span>· {items.length} {sortingCategories ? '个分类' : '道菜品'}</span></h2>
       <Button disabled={busy || dirty} onClick={load}>刷新列表</Button>
     </ListHeader>
+    <Notice>拖到卡片上半部插入前面，下半部插入后面，蓝线表示松开后的位置。也可在卡片间隙松开；手机上可使用 ↑↓ 按钮。</Notice>
     {loading ? <Notice role="status">正在加载菜单…</Notice> : <>
       {!items.length && <Notice>{sortingCategories ? '暂无分类，请先在 Category 中添加分类。' : '当前分类暂无菜品。请在 Dish 中添加菜品并关联已发布的分类。'}</Notice>}
-      <ol style={{listStyle: 'none', padding: 0, margin: 0}} aria-label={sortingCategories ? '分类排序' : '菜品排序'}>
+      <ol style={{listStyle: 'none', padding: '6px 0', margin: 0}} aria-label={sortingCategories ? '分类排序' : '菜品排序'}
+        onDragOver={dragOver} onDrop={drop}
+        onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDropIndex(null) }}>
         {items.map((item, index) => {
           const dish = item.document
           const thumbnail = dish.photoUrl ? `${dish.photoUrl}?w=104&h=104&fit=crop&auto=format&q=75` : dish.imageFilename
           const draftOnly = item.versions.every((v) => v._id.startsWith('drafts.'))
           const price = dish.priceInfo?.priceType === 'market' ? '时价' :
             Number.isFinite(dish.priceInfo?.amount) && dish.priceInfo.amount >= 0 ? dish.priceInfo.amount.toFixed(2) : '价格待确认'
-          return <Row key={item.id} draggable={!busy} data-drop={dropId === item.id}
-            onDragStart={(e) => { dragId.current = item.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.id) }}
-            onDragOver={(e) => { if (!busy && dragId.current) { e.preventDefault(); setDropId(item.id) } }}
-            onDragEnd={() => { dragId.current = null; setDropId('') }}
-            onDrop={(e) => { e.preventDefault(); if (!busy && dragId.current) move(items.findIndex((d) => d.id === dragId.current), index); dragId.current = null; setDropId('') }}>
+          return <Row key={item.id} draggable={!busy} data-order-id={item.id}
+            data-insert={dropIndex === index ? 'before' : dropIndex === items.length && index === items.length - 1 ? 'after' : undefined}
+            onDragStart={(e) => {
+              if (busy || e.target.closest('button')) { e.preventDefault(); return }
+              dragId.current = item.id
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', item.id)
+            }}
+            onDragEnd={clearDrag}>
             <Handle aria-hidden="true">⠿</Handle><NumberLabel>{index + 1}</NumberLabel>
             {!sortingCategories && <Picture>{thumbnail ? <img src={thumbnail} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = 'none' }} /> : '无图'}</Picture>}
             <Info><strong>{dish.name || (sortingCategories ? '未命名分类' : '未命名菜品')}</strong><small>

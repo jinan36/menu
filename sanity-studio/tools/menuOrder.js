@@ -29,6 +29,15 @@ export function moveDish(items, from, to) {
   return next
 }
 
+// insertionIndex 表示移除前列表中的间隙：0 为最前，length 为最后。
+export function insertDraggedItem(items, sourceId, insertionIndex) {
+  const from = items.findIndex((item) => item.id === sourceId)
+  if (from < 0 || !Number.isInteger(insertionIndex) || insertionIndex < 0 || insertionIndex > items.length) return items
+  const to = insertionIndex > from ? insertionIndex - 1 : insertionIndex
+  if (to === from) return items
+  return moveDish(items, from, to)
+}
+
 export function orderPatches(items) {
   return items.flatMap((item, index) =>
     item.versions.map((document) => ({
