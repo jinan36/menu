@@ -308,6 +308,7 @@ const openImagePreview = (dish) => {
   margin-top: 6px;
   font-size: 16px;
   line-height: 1.7;
+  white-space: pre-line;
   overflow-wrap: anywhere;
   color: var(--menu-muted);
 }
