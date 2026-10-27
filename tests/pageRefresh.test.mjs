@@ -120,6 +120,7 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
     onUnmounted: callback => { unmounted.push(callback) },
     createImagePreview: () => ({open() {}, dispose() {}}),
     createImagePreviewSwipe: () => {},
+    window: {addEventListener() {}, removeEventListener() {}, clearTimeout() {}},
     createPageRefresh: refresh => createPageRefresh(refresh, env),
     createDishImages: () => () => ({}),
     console: {error: (...args) => errors.push(args)},
@@ -164,4 +165,54 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
   assert.equal(state.isLoading.value, false)
   assert.equal(errors.length, 2)
   unmounted.forEach(callback => callback())
+})
+
+test('点击远处分类期间锁定导航，停止后恢复随页面选中，连续点击使用最新目标', () => {
+  const source = readFileSync(new URL('../src/views/HomeView.vue', import.meta.url), 'utf8')
+    .match(/<script setup>([\s\S]*?)<\/script>/)[1].replace(/^import .*$/gm, '')
+  const pageScrolls = []
+  const navScrolls = []
+  const timers = new Map()
+  let timerId = 0
+  const state = runInNewContext(`(() => {${source}; return {
+    allDishes, active, categoryNav, categoryElements, categoryButtons, categoryScrollLocked,
+    scrollToCategory, onCategoryPageScroll, finishCategoryScroll
+  }})()`, {
+    ref: value => ({value}), computed: getter => ({get value() {return getter()}}),
+    onMounted() {}, onUnmounted() {},
+    createPageRefresh: () => ({}), createDishImages: () => () => ({}), sanityClient: {},
+    createImagePreview: () => ({}), createImagePreviewSwipe() {}, showImagePreview() {},
+    window: {
+      scrollY: 500,
+      matchMedia: () => ({matches: false}),
+      scrollTo: value => pageScrolls.push(value),
+      setTimeout: callback => {timers.set(++timerId, callback); return timerId},
+      clearTimeout: id => timers.delete(id),
+    },
+  })
+  state.allDishes.value = ['a', 'b', 'c'].map(id => ({category: {_id: id, name: id}}))
+  state.categoryNav.value = {clientWidth: 200, getBoundingClientRect: () => ({height: 56}), scrollTo: value => navScrolls.push(value)}
+  let positions = [0, 800, 1600]
+  for (const [i, id] of ['a', 'b', 'c'].entries()) {
+    state.categoryElements.set(id, {getBoundingClientRect: () => ({top: positions[i]})})
+    state.categoryButtons.set(id, {offsetLeft: i * 100, offsetWidth: 80})
+  }
+  state.scrollToCategory(2)
+  assert.equal(state.active.value, 2)
+  assert.equal(pageScrolls[0].behavior, 'smooth')
+  assert.equal(navScrolls.length, 1)
+  state.scrollToCategory(2)
+  assert.equal(pageScrolls.length, 1, '同一分类快速重复点击不重启页面滚动')
+  assert.equal(navScrolls.length, 1)
+  positions = [-500, 20, 800]
+  state.onCategoryPageScroll()
+  assert.equal(state.active.value, 2)
+  assert.equal(navScrolls.length, 1)
+  state.scrollToCategory(0)
+  assert.equal(state.active.value, 0)
+  assert.equal(timers.size, 1)
+  state.finishCategoryScroll()
+  state.onCategoryPageScroll()
+  assert.equal(state.active.value, 1)
+  assert.equal(state.categoryScrollLocked.value, false)
 })

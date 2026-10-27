@@ -15,7 +15,72 @@ const getDishImages = createDishImages(sanityClient)
 const allDishes = ref([])
 const isLoading = ref(true)
 const active = ref(0)
+const categoryNav = ref(null)
+const categoryElements = new Map()
+const categoryButtons = new Map()
+const categoryScrollLocked = ref(false)
+let categoryScrollTimer
+let lastCategoryClick = {index: -1, time: 0}
 const wifi = ref({name: 'Apartamento 64', password: '66664444'})
+
+const finishCategoryScroll = () => {
+  window.clearTimeout(categoryScrollTimer)
+  categoryScrollLocked.value = false
+}
+const revealCategory = (index) => {
+  const nav = categoryNav.value
+  const group = groupedMenu.value[index]
+  const button = group && categoryButtons.get(group.categoryId)
+  if (!nav || !button) return
+  nav.scrollTo({
+    left: Math.max(0, button.offsetLeft - (nav.clientWidth - button.offsetWidth) / 2),
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+  })
+}
+const onCategoryPageScroll = () => {
+  if (categoryScrollLocked.value) {
+    window.clearTimeout(categoryScrollTimer)
+    categoryScrollTimer = window.setTimeout(finishCategoryScroll, 160)
+    return
+  }
+  const navHeight = categoryNav.value?.getBoundingClientRect().height || 56
+  let index = 0
+  groupedMenu.value.forEach((group, candidate) => {
+    if (categoryElements.get(group.categoryId)?.getBoundingClientRect().top <= navHeight + 2) index = candidate
+  })
+  if (index !== active.value) {
+    active.value = index
+    revealCategory(index)
+  }
+}
+
+// 点击后锁定目标，途经分类不改变导航；用户手动滚动时才跟随。
+const scrollToCategory = (index) => {
+  const group = groupedMenu.value[index]
+  const target = group && categoryElements.get(group.categoryId)
+  if (!target) return false
+  const now = Date.now()
+  if (lastCategoryClick.index === index && (
+    categoryScrollLocked.value || now - lastCategoryClick.time < 400
+  )) return false
+  lastCategoryClick = {index, time: now}
+  finishCategoryScroll()
+  active.value = index
+  categoryScrollLocked.value = true
+  revealCategory(index)
+  const navHeight = categoryNav.value?.getBoundingClientRect().height || 56
+  // 多留 1px，避免小数像素使位置跟随误选前一个分类。
+  const top = Math.max(0, Math.ceil(window.scrollY + target.getBoundingClientRect().top - navHeight) + 1)
+  window.scrollTo({
+    top,
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+  })
+  // 无滚动发生时也会解锁；滚动期间由 scroll 事件延后到停止后解锁。
+  categoryScrollTimer = window.setTimeout(finishCategoryScroll, 1000)
+}
+const onCategoryScrollEnd = (event) => {
+  if (event.target === document || event.target === window) finishCategoryScroll()
+}
 
 const formatPrice = (priceInfo) => {
   if (priceInfo?.priceType === 'market') return '时价'
@@ -101,8 +166,17 @@ const pageRefresh = createPageRefresh(async (signal) => {
   await Promise.all([loadRestaurantSettings(signal), loadDishes(signal)])
 })
 
-onMounted(() => pageRefresh.start())
+onMounted(() => {
+  pageRefresh.start()
+  window.addEventListener('scroll', onCategoryPageScroll, {passive: true})
+  window.addEventListener('scrollend', onCategoryScrollEnd)
+})
 onUnmounted(() => pageRefresh.stop())
+onUnmounted(() => {
+  finishCategoryScroll()
+  window.removeEventListener('scroll', onCategoryPageScroll)
+  window.removeEventListener('scrollend', onCategoryScrollEnd)
+})
 
 const previewHintVisible = ref(false)
 const imagePreview = createImagePreview(showImagePreview, createImagePreviewSwipe, (visible) => {
@@ -133,9 +207,23 @@ const openImagePreview = (dish) => {
         <van-loading size="24px" vertical>加载中...</van-loading>
       </div>
       <div v-else>
-        <van-tabs v-model:active="active" scrollspy sticky>
-          <van-tab v-for="group in groupedMenu" :title="group.categoryName" :key="group.categoryId">
-            <div class="dish-cards-wrapper">
+        <nav ref="categoryNav" class="category-nav" aria-label="菜品分类">
+          <button
+            v-for="(group, index) in groupedMenu"
+            :key="group.categoryId"
+            :ref="el => el ? categoryButtons.set(group.categoryId, el) : categoryButtons.delete(group.categoryId)"
+            type="button"
+            :aria-current="active === index ? 'true' : undefined"
+            :aria-controls="`category-${group.categoryId}`"
+            @click="scrollToCategory(index)"
+          >{{ group.categoryName }}</button>
+        </nav>
+        <template v-for="group in groupedMenu" :key="group.categoryId">
+            <div
+              :id="`category-${group.categoryId}`"
+              :ref="el => el ? categoryElements.set(group.categoryId, el) : categoryElements.delete(group.categoryId)"
+              class="dish-cards-wrapper"
+            >
               <div class="category-heading">
                 <h2>{{ group.categoryName }}</h2>
               </div>
@@ -173,8 +261,7 @@ const openImagePreview = (dish) => {
                 </div>
               </div>
             </div>
-          </van-tab>
-        </van-tabs>
+        </template>
       </div>
     </div>
   </main>
@@ -256,14 +343,45 @@ const openImagePreview = (dish) => {
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
-.menu-list-container :deep(.van-tabs__wrap) {
+.category-nav {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  display: flex;
+  height: 56px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  background: #f8f5ef;
   border-bottom: 1px solid var(--menu-line);
 }
-.menu-list-container :deep(.van-tab--active .van-tab__text) {
+.category-nav::-webkit-scrollbar {
+  display: none;
+}
+.category-nav button {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--menu-muted);
+  font-size: 19px;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.category-nav button[aria-current="true"] {
+  color: var(--menu-accent);
   font-weight: 700;
 }
-.menu-list-container :deep(.van-tabs__line) {
-  border-radius: 0;
+.category-nav button[aria-current="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 3px;
+  background: var(--menu-accent);
 }
 .dish-cards-wrapper {
   padding: 0 12px;
