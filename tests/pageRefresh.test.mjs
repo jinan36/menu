@@ -100,7 +100,7 @@ test('失败后仍限频并可重试；退出会取消请求且不再响应返�
   assert.equal(calls, 2)
 })
 
-test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失败均保留已有内容', async () => {
+test('菜单数据模块在返回时更新菜品和 Wi-Fi，静默读取及失败均保留已有内容', async () => {
   const env = environment()
   const pending = deferred()
   let round = 'initial'
@@ -108,19 +108,16 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
   const unmounted = []
   let calls = 0
   const errors = []
-  const source = readFileSync(new URL('../src/views/HomeView.vue', import.meta.url), 'utf8')
-    .match(/<script setup>([\s\S]*?)<\/script>/)[1].replace(/^import .*$/gm, '')
+  const source = readFileSync(new URL('../src/composables/useMenuData.js', import.meta.url), 'utf8')
+    .replace(/^import .*$/gm, '').replace('export function', 'function')
   const state = runInNewContext(`(() => {
     ${source}
-    return {allDishes, wifi, isLoading}
+    return useMenuData(sanityClient)
   })()`, {
     ref: value => ({value}),
     computed: getter => ({get value() { return getter() }}),
     onMounted: callback => { mounted = callback },
     onUnmounted: callback => { unmounted.push(callback) },
-    createImagePreview: () => ({open() {}, dispose() {}}),
-    createImagePreviewSwipe: () => {},
-    window: {addEventListener() {}, removeEventListener() {}, clearTimeout() {}},
     createPageRefresh: refresh => createPageRefresh(refresh, env),
     createDishImages: () => () => ({}),
     console: {error: (...args) => errors.push(args)},
@@ -136,7 +133,6 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
         return [{_id: 'dish', name: round, category: {_id: 'category', name: 'category'}}]
       },
     },
-    showImagePreview: () => {},
   })
   mounted()
   await settle()
@@ -167,52 +163,63 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
   unmounted.forEach(callback => callback())
 })
 
-test('点击远处分类期间锁定导航，停止后恢复随页面选中，连续点击使用最新目标', () => {
-  const source = readFileSync(new URL('../src/views/HomeView.vue', import.meta.url), 'utf8')
-    .match(/<script setup>([\s\S]*?)<\/script>/)[1].replace(/^import .*$/gm, '')
+test('导航模块锁定目标、保护重复点击，并在滚动停止后恢复跟随', () => {
+  const source = readFileSync(new URL('../src/composables/useCategoryNavigation.js', import.meta.url), 'utf8')
+    .replace(/^import .*$/gm, '').replace('export function', 'function')
   const pageScrolls = []
   const navScrolls = []
   const timers = new Map()
+  const handlers = new Map()
+  const buttons = new Map()
+  let mounted
+  let unmounted
   let timerId = 0
-  const state = runInNewContext(`(() => {${source}; return {
-    allDishes, active, categoryNav, categoryElements, categoryButtons, categoryScrollLocked,
-    scrollToCategory, onCategoryPageScroll, finishCategoryScroll
-  }})()`, {
-    ref: value => ({value}), computed: getter => ({get value() {return getter()}}),
-    onMounted() {}, onUnmounted() {},
-    createPageRefresh: () => ({}), createDishImages: () => () => ({}), sanityClient: {},
-    createImagePreview: () => ({}), createImagePreviewSwipe() {}, showImagePreview() {},
+  const state = runInNewContext(`(() => {${source}; return useCategoryNavigation({value: [
+    {categoryId: 'a'}, {categoryId: 'b'}, {categoryId: 'c'}
+  ]})})()`, {
+    ref: value => ({value}),
+    onMounted: callback => {mounted = callback},
+    onUnmounted: callback => {unmounted = callback},
     window: {
       scrollY: 500,
       matchMedia: () => ({matches: false}),
       scrollTo: value => pageScrolls.push(value),
       setTimeout: callback => {timers.set(++timerId, callback); return timerId},
       clearTimeout: id => timers.delete(id),
+      addEventListener: (name, callback) => handlers.set(name, callback),
+      removeEventListener: name => handlers.delete(name),
     },
   })
-  state.allDishes.value = ['a', 'b', 'c'].map(id => ({category: {_id: id, name: id}}))
-  state.categoryNav.value = {clientWidth: 200, getBoundingClientRect: () => ({height: 56}), scrollTo: value => navScrolls.push(value)}
+  mounted()
+  state.categoryNav.value = {
+    element: {clientWidth: 200, getBoundingClientRect: () => ({height: 56}), scrollTo: value => navScrolls.push(value)},
+    getButton: id => buttons.get(id),
+  }
   let positions = [0, 800, 1600]
   for (const [i, id] of ['a', 'b', 'c'].entries()) {
-    state.categoryElements.set(id, {getBoundingClientRect: () => ({top: positions[i]})})
-    state.categoryButtons.set(id, {offsetLeft: i * 100, offsetWidth: 80})
+    state.setCategoryElement(id, {getBoundingClientRect: () => ({top: positions[i]})})
+    buttons.set(id, {offsetLeft: i * 100, offsetWidth: 80})
   }
   state.scrollToCategory(2)
   assert.equal(state.active.value, 2)
   assert.equal(pageScrolls[0].behavior, 'smooth')
   assert.equal(navScrolls.length, 1)
   state.scrollToCategory(2)
-  assert.equal(pageScrolls.length, 1, '同一分类快速重复点击不重启页面滚动')
-  assert.equal(navScrolls.length, 1)
+  assert.equal(pageScrolls.length, 1, '重复点击不重启页面滚动')
   positions = [-500, 20, 800]
-  state.onCategoryPageScroll()
+  handlers.get('scroll')()
   assert.equal(state.active.value, 2)
   assert.equal(navScrolls.length, 1)
   state.scrollToCategory(0)
   assert.equal(state.active.value, 0)
   assert.equal(timers.size, 1)
-  state.finishCategoryScroll()
-  state.onCategoryPageScroll()
+  Array.from(timers.values())[0]()
+  handlers.get('scroll')()
   assert.equal(state.active.value, 1)
-  assert.equal(state.categoryScrollLocked.value, false)
+  state.setCategoryElement('b', null)
+  state.scrollToCategory(1)
+  assert.equal(pageScrolls.length, 2, '卸载的分类不会再发起滚动')
+  unmounted()
+  assert.equal(handlers.size, 0)
+  assert.equal(timers.size, 0)
 })
