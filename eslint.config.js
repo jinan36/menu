@@ -10,7 +10,7 @@ export default defineConfig([
     files: ['**/*.{js,mjs,jsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'sanity-studio/**', 'output/**']),
 
   {
     languageOptions: {
@@ -21,6 +21,10 @@ export default defineConfig([
   },
 
   js.configs.recommended,
+  {
+    files: ['tests/**/*.mjs', '*.config.js'],
+    languageOptions: { globals: globals.node },
+  },
   ...pluginVue.configs['flat/essential'],
   skipFormatting,
 ])

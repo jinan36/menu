@@ -30,12 +30,22 @@ pnpm dev
 
 ## 构建和测试
 
+在此目录运行一键检查，依次执行代码检查、测试和构建；任一步失败即停止：
+
 ```powershell
-pnpm build
-pnpm test
+pnpm check
 ```
 
-构建产物为此目录下的 `dist/`。测试覆盖菜单排序和分类变更规则，不写入 Sanity 数据。
+也可以单独运行：
+
+- `pnpm lint`：只检查，不修改文件；存在错误或警告时失败。
+- `pnpm lint:fix`：自动修复可修复的规范问题。
+- `pnpm test`：运行 `tests/` 下全部 `*.test.mjs` 测试。
+- `pnpm build`：构建后台，不发布代码或修改 Sanity 数据。
+
+从仓库根目录运行 `pnpm --dir sanity-studio check`，效果相同。
+构建产物为此目录下的 `dist/`，检查排除构建产物和 `.sanity/` 缓存。
+测试覆盖菜单排序、分类变更和环境隔离规则，不写入 Sanity 数据。
 修改依赖时使用 `pnpm add`，并一起提交 `package.json` 和 `pnpm-lock.yaml`。
 
 ## Vercel 设置

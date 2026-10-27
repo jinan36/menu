@@ -15,7 +15,10 @@
     "build": "sanity build",
     "deploy": "sanity deploy",
     "deploy-graphql": "sanity graphql deploy",
-    "test": "node --test tests/menuOrder.test.mjs tests/environment.test.mjs",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "test": "node --test tests/*.test.mjs",
+    "check": "pnpm lint && pnpm test && pnpm build",
     "preinstall": "node -e \"if (!process.env.npm_config_user_agent?.startsWith('pnpm/')) { console.error('Please use pnpm install'); process.exit(1) }\""
   },
   "keywords": [

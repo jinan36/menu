@@ -72,20 +72,32 @@ pnpm dev --host 0.0.0.0
 
 ## 构建与检查
 
-在根目录构建菜单：
+前台和后台分别在自己的目录使用相同的检查命令：
+
+| 命令 | 作用 |
+| --- | --- |
+| `pnpm lint` | 只检查代码，不修改文件；存在错误或警告时失败 |
+| `pnpm lint:fix` | 自动修复可修复的规范问题，剩余问题仍会报告 |
+| `pnpm test` | 运行当前目录 `tests/` 下的全部 `*.test.mjs` 测试 |
+| `pnpm build` | 构建部署产物，不会发布代码或修改 Sanity 数据 |
+| `pnpm check` | 依次运行 lint、test、build，任一步失败即停止 |
+
+在项目根目录检查前台：
 
 ```powershell
-pnpm build
+pnpm check
 ```
+
+前台检查排除 `sanity-studio/`、`output/` 和构建产物；后台使用自己的 ESLint 配置。
+`pnpm check` 不会自动修复源码，但构建会更新忽略提交的 `dist/` 产物。
 
 产物位于根目录 `dist/`。`pnpm preview` 可以预览构建产物，通常使用 4173 端口；
 生产模式会直接访问 Sanity，需要该预览来源在 Sanity CORS 配置中获准。
 
-在后台目录构建和运行排序测试：
+从项目根目录检查后台：
 
 ```powershell
-pnpm build
-pnpm test
+pnpm --dir sanity-studio check
 ```
 
 后台产物位于 `sanity-studio/dist/`。首次安装以及修改依赖后需要安装，
