@@ -2,9 +2,12 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { showImagePreview } from 'vant'
 import 'vant/es/image-preview/style'
+import '../imagePreview.css'
 import sanityClient from '../sanityClient'
 import { createDishImages } from '../dishImages'
 import { createPageRefresh } from '../pageRefresh'
+import { createImagePreview } from '../imagePreview'
+import { createImagePreviewSwipe } from '../imagePreviewSwipe'
 
 const getDishImages = createDishImages(sanityClient)
 
@@ -101,21 +104,19 @@ const pageRefresh = createPageRefresh(async (signal) => {
 onMounted(() => pageRefresh.start())
 onUnmounted(() => pageRefresh.stop())
 
+const previewHintVisible = ref(false)
+const imagePreview = createImagePreview(showImagePreview, createImagePreviewSwipe, (visible) => {
+  previewHintVisible.value = visible
+})
+onUnmounted(() => imagePreview.dispose())
+
 const openImagePreview = (dish) => {
   // 安全检查，如果菜品没有图片，则不执行任何操作
   if (!dish?.images?.preview) {
     return
   }
 
-  // 构建完整的高清图片URL
-  const imageUrl = dish.images.preview
-
-  // 调用Vant的图片预览函数
-  showImagePreview({
-    images: [imageUrl], // 需要一个图片URL数组，即使只有一张
-    startPosition: 0, // 从第一张图片开始（因为我们只有一个）
-    closeable: true, // 显示关闭按钮
-  })
+  imagePreview.open(dish.images.preview)
 }
 </script>
 
@@ -177,9 +178,37 @@ const openImagePreview = (dish) => {
       </div>
     </div>
   </main>
+  <Teleport to="body">
+    <div v-if="previewHintVisible" class="image-preview-hint">
+      ↓ 下滑或轻点关闭
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
+.image-preview-hint {
+  position: fixed;
+  z-index: 3000;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  padding: 7px 14px;
+  border-radius: 20px;
+  color: rgb(255 255 255 / 80%);
+  background: rgb(0 0 0 / 25%);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: preview-hint-fade 2.4s ease-out forwards;
+}
+
+@keyframes preview-hint-fade {
+  0% { opacity: 0; }
+  10%, 83% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
 .menu-list-container {
   --menu-accent: #8d342c;
   --menu-ink: #29231f;

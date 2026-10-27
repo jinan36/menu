@@ -1,0 +1,9 @@
+/* 从手势当前透明度继续淡出，避免 Vant 默认从 1 开始导致蒙层闪黑。 */
+.menu-image-preview-overlay.van-fade-leave-active {
+  animation-name: menu-preview-overlay-out;
+}
+
+@keyframes menu-preview-overlay-out {
+  from { opacity: var(--menu-preview-opacity, 1); }
+  to { opacity: 0; }
+}

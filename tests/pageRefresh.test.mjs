@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
 import test from 'node:test'
+import {setImmediate} from 'node:timers'
 import {createPageRefresh} from '../src/pageRefresh.js'
 
 const settle = () => new Promise(resolve => setImmediate(resolve))
@@ -104,7 +105,7 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
   const pending = deferred()
   let round = 'initial'
   let mounted
-  let unmounted
+  const unmounted = []
   let calls = 0
   const errors = []
   const source = readFileSync(new URL('../src/views/HomeView.vue', import.meta.url), 'utf8')
@@ -116,7 +117,9 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
     ref: value => ({value}),
     computed: getter => ({get value() { return getter() }}),
     onMounted: callback => { mounted = callback },
-    onUnmounted: callback => { unmounted = callback },
+    onUnmounted: callback => { unmounted.push(callback) },
+    createImagePreview: () => ({open() {}, dispose() {}}),
+    createImagePreviewSwipe: () => {},
     createPageRefresh: refresh => createPageRefresh(refresh, env),
     createDishImages: () => () => ({}),
     console: {error: (...args) => errors.push(args)},
@@ -160,5 +163,5 @@ test('实际菜单脚本在返回时更新菜品和 Wi-Fi，静默读取及失�
   assert.equal(state.wifi.value.name, 'update')
   assert.equal(state.isLoading.value, false)
   assert.equal(errors.length, 2)
-  unmounted()
+  unmounted.forEach(callback => callback())
 })
