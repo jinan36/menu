@@ -1,9 +1,10 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { showImagePreview } from 'vant'
 import 'vant/es/image-preview/style'
 import sanityClient from '../sanityClient'
 import { createDishImages } from '../dishImages'
+import { createPageRefresh } from '../pageRefresh'
 
 const getDishImages = createDishImages(sanityClient)
 
@@ -46,16 +47,15 @@ const groupedMenu = computed(() => {
   return Array.from(groups.values())
 })
 
-// 组件挂载后获取数据
-onMounted(async () => {
+const loadRestaurantSettings = async (signal) => {
   try {
     const settings = await sanityClient.fetch(
       '*[_type == "restaurantSettings" && _id == "restaurantSettings"][0]{wifiName, wifiPassword}',
       {},
-      {perspective: 'published'},
+      {perspective: 'published', signal},
     )
     // 尚未发布或配置不完整时，沿用现有 Wi-Fi 信息。
-    if (typeof settings?.wifiName === 'string' && settings.wifiName.trim()) {
+    if (!signal.aborted && typeof settings?.wifiName === 'string' && settings.wifiName.trim()) {
       wifi.value = {
         name: settings.wifiName,
         password: typeof settings.wifiPassword === 'string' && settings.wifiPassword !== ''
@@ -64,11 +64,11 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to fetch restaurant settings:', error)
+    if (!signal.aborted) console.error('Failed to fetch restaurant settings:', error)
   }
-})
+}
 
-onMounted(async () => {
+const loadDishes = async (signal) => {
   try {
     const query = `*[_type == "dish" && status == 0 ] | order(defined(category->sortOrder) desc, category->sortOrder asc, category->_createdAt asc, category->_id asc, defined(sortOrder) desc, sortOrder asc, coalesce(sortAddedAt, _createdAt) asc, _id asc) {
       _id,
@@ -82,14 +82,24 @@ onMounted(async () => {
         name
       }
     }`
-    const dishes = await sanityClient.fetch(query)
-    allDishes.value = dishes.map((dish) => ({ ...dish, images: getDishImages(dish) }))
+    const dishes = await sanityClient.fetch(query, {}, {perspective: 'published', signal})
+    if (!signal.aborted) {
+      allDishes.value = dishes.map((dish) => ({ ...dish, images: getDishImages(dish) }))
+    }
   } catch (error) {
-    console.error('Failed to fetch dishes:', error)
+    if (!signal.aborted) console.error('Failed to fetch dishes:', error)
   } finally {
-    isLoading.value = false
+    if (!signal.aborted) isLoading.value = false
   }
+}
+
+const pageRefresh = createPageRefresh(async (signal) => {
+  // 两项独立读取；后台刷新时不清空内容、不恢复整页加载状态。
+  await Promise.all([loadRestaurantSettings(signal), loadDishes(signal)])
 })
+
+onMounted(() => pageRefresh.start())
+onUnmounted(() => pageRefresh.stop())
 
 const openImagePreview = (dish) => {
   // 安全检查，如果菜品没有图片，则不执行任何操作
