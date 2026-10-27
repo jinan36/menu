@@ -33,11 +33,11 @@ pnpm dev
 
 ```dotenv
 VITE_SANITY_PROJECT_ID=t3dj4nuv
-VITE_SANITY_DATASET=production
 ```
 
-修改环境变量后重启开发服务。这两个值用于选择 Sanity 项目和数据集，
-不需要在前台填写写入 Token。
+数据集由仓库中的 `.env.development` 和 `.env.production` 分别指定为
+`development` 和 `production`。不要在 `.env.local` 中再固定数据集，否则可能覆盖模式配置。
+修改环境变量后重启服务，前台无需写入 Token，也不要配置 `VITE_SANITY_TOKEN`。
 
 ## 启动 Sanity 后台
 
@@ -106,7 +106,10 @@ pnpm test
 | Output Directory | `dist` | `dist` |
 | Node.js Version | 22.x | 22.x |
 
-前台的 Environment Variables 需要配置上面的两个 `VITE_SANITY_*` 变量。
+前台 Vercel 的 Production 环境变量保持 `VITE_SANITY_PROJECT_ID=t3dj4nuv`
+和 `VITE_SANITY_DATASET=production`。后台 Production 可明确设置
+`SANITY_STUDIO_PROJECT_ID=t3dj4nuv` 和 `SANITY_STUDIO_DATASET=production`，
+未覆盖时也会读取仓库内的 `.env.production`。
 在两个 Vercel 项目的 Environment Variables 中都添加
 `ENABLE_EXPERIMENTAL_COREPACK=1`，应用于 Production 和 Preview，
 以便按各目录 `packageManager` 字段使用固定的 pnpm 版本。
@@ -116,3 +119,21 @@ pnpm test
 Vercel 的 Ignored Build Step 已按目录分别配置：只改 `sanity-studio/` 时前台跳过，
 只改前台时后台跳过。规则保存在 Vercel 项目设置中，不在仓库内；
 涉及两部分的改动应分别构建。看到 `Canceled by Ignored Build Step` 表示按规则跳过。
+
+## 数据环境隔离
+
+| 场景 | 菜单前台 | Sanity 后台 / CLI |
+| --- | --- | --- |
+| 本地 `pnpm dev` | `development` | `development` |
+| 默认 `pnpm build` / Vercel 正式部署 | `production` | `production` |
+| 后台普通 CLI 命令 | — | 默认 `development` |
+
+开发数据仍位于 Sanity 云端，与正式数据独立。本地后台显示黄色开发环境提示；
+测试发布、上传图片和调整排序仅影响开发数据。日常修改正式菜单请使用线上后台。
+Git 提交和推送只发布代码，不会把开发菜品同步到正式数据集。
+开发数据是复制时的快照，后续两边修改不会自动同步。
+
+需要查看 CLI 当前数据集，可在后台目录运行 `pnpm exec sanity debug`。
+导入、导出等操作必须明确指定目标数据集，避免把测试内容导入正式环境。
+历史脚本 `setInitialStatus.js` 也要求显式设置 `SANITY_STUDIO_PROJECT_ID`
+和 `SANITY_STUDIO_DATASET`；如需 Token，仅使用未暴露给浏览器的 `SANITY_API_TOKEN`。

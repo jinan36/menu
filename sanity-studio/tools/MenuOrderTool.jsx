@@ -230,7 +230,7 @@ export default function MenuOrderTool() {
     </Panel>}
     <Notice>{sortingCategories
       ? '保存后，分类自动编号为 1、2、3……，更新前台分类顺序。只修改分类排序，不改变分类内菜品顺序，也不会发布其他草稿内容。仅草稿的分类及没有上架菜品的分类不会出现在前台。'
-      : '保存后，当前分类自动编号为 1、2、3……，并更新线上菜单顺序。仅修改排序字段，不会发布菜品的其他草稿内容。'}</Notice>
+      : '保存后，当前分类自动编号为 1、2、3……，并更新当前环境的菜单顺序。仅修改排序字段，不会发布菜品的其他草稿内容。'}</Notice>
     {error && <Notice $error role="alert">{error}</Notice>}
     {message && <Notice role="status">{message}</Notice>}
     <ListHeader>

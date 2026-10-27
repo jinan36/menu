@@ -15,7 +15,7 @@
     "build": "sanity build",
     "deploy": "sanity deploy",
     "deploy-graphql": "sanity graphql deploy",
-    "test": "node --test tests/menuOrder.test.mjs",
+    "test": "node --test tests/menuOrder.test.mjs tests/environment.test.mjs",
     "preinstall": "node -e \"if (!process.env.npm_config_user_agent?.startsWith('pnpm/')) { console.error('Please use pnpm install'); process.exit(1) }\""
   },
   "keywords": [

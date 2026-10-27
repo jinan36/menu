@@ -5,11 +5,13 @@ import {createClient} from '@sanity/client'
 // 创建一个有写入权限的客户端
 // 你需要一个有写入权限的token，可以在 https://www.sanity.io/manage/project/YOUR_PROJECT_ID/api#tokens 创建
 // 强烈建议将 token 存储在 .env 文件中，而不是直接写在代码里
-console.log(process.env.VITE_SANITY_PROJECT_ID)
+if (!process.env.SANITY_STUDIO_PROJECT_ID || !process.env.SANITY_STUDIO_DATASET) {
+  throw new Error('请明确设置 SANITY_STUDIO_PROJECT_ID 和 SANITY_STUDIO_DATASET 后再运行数据脚本')
+}
 const client = createClient({
-  projectId: process.env.VITE_SANITY_PROJECT_ID,
-  dataset: process.env.VITE_SANITY_DATASET,
-  token: process.env.VITE_SANITY_TOKEN,
+  projectId: process.env.SANITY_STUDIO_PROJECT_ID,
+  dataset: process.env.SANITY_STUDIO_DATASET,
+  token: process.env.SANITY_API_TOKEN,
   useCdn: false, // 必须为 false 来获取最新数据
   apiVersion: '2025-08-14', // 使用一个较新的 API 版本
 })

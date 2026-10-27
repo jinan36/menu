@@ -3,13 +3,17 @@ import {structureTool} from 'sanity/structure'
 import {visionTool} from '@sanity/vision'
 import {schemaTypes} from './schemaTypes'
 import MenuOrderTool from './tools/MenuOrderTool'
+import EnvironmentLayout from './tools/EnvironmentLayout'
+import {projectId, dataset} from './sanityEnvironment'
 
 export default defineConfig({
   name: 'default',
-  title: 'menu',
+  title: dataset === 'production' ? 'menu' : 'menu · 开发环境',
 
-  projectId: 't3dj4nuv',
-  dataset: 'production',
+  projectId,
+  dataset,
+
+  studio: {components: {layout: EnvironmentLayout}},
 
   plugins: [
     structureTool({
